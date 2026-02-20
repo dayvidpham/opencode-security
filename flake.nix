@@ -133,6 +133,9 @@
               unset PYTHONPATH
               export REPO_ROOT=$(git rev-parse --show-toplevel)
 
+              # Use version-controlled hooks
+              git config --local core.hooksPath .githooks
+
               # Ensure native libs are findable
               export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
                 pkgs.zlib
