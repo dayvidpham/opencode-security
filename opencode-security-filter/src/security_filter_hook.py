@@ -8,16 +8,8 @@ if any path is denied.
 """
 
 import json
-import os
 import shlex
 import sys
-
-# Add the opencode-security-filter source to sys.path so the import works
-# without needing pip install. CLAUDE_PLUGIN_ROOT is set by Claude Code.
-_plugin_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_src_dir = os.path.join(_plugin_root, "opencode-security-filter", "src")
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 from opencode_security.filter import SecurityFilter
 
