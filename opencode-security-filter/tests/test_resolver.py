@@ -8,7 +8,7 @@ from opencode_security.resolver import (
     group_by_level,
     resolve,
 )
-from opencode_security.types import SpecificityLevel
+from opencode_security.types import Operation, SpecificityLevel
 
 
 class TestFindMatchingPatterns:
@@ -37,7 +37,7 @@ class TestGroupByLevel:
 
 class TestResolve:
     def test_pub_file_in_ssh_allowed(self):
-        """*.pub (L2, ALLOW) supersedes ~/.ssh/* (L6, DENY)"""
+        """*.pub (L2, ALLOW) supersedes ~/.ssh/* (L7, DENY)"""
         home = str(Path.home())
         decision, reason, pattern, level = resolve(f"{home}/.ssh/id_ed25519.pub", False)
         assert decision == "allow"
@@ -46,7 +46,7 @@ class TestResolve:
         assert pattern.pattern == r"\.pub$"
 
     def test_env_in_dotfiles_denied(self):
-        """*.env (L2, DENY) supersedes ~/dotfiles/* (L6, ALLOW)"""
+        """*.env (L2, DENY) supersedes ~/dotfiles/* (L7, ALLOW)"""
         home = str(Path.home())
         decision, reason, pattern, level = resolve(f"{home}/dotfiles/.env", False)
         assert decision == "deny"
@@ -54,14 +54,14 @@ class TestResolve:
         assert pattern.pattern == r"\.env$"
 
     def test_ssh_config_denied(self):
-        """~/.ssh/config matches only ~/.ssh/* (L6, DENY)"""
+        """~/.ssh/config matches only ~/.ssh/* (L7, DENY)"""
         home = str(Path.home())
         decision, reason, pattern, level = resolve(f"{home}/.ssh/config", False)
         assert decision == "deny"
         assert level == SpecificityLevel.DIR_GLOB
 
     def test_dotfiles_nix_allowed(self):
-        """~/dotfiles/flake.nix matches only ~/dotfiles/* (L6, ALLOW)"""
+        """~/dotfiles/flake.nix matches only ~/dotfiles/* (L7, ALLOW)"""
         home = str(Path.home())
         decision, reason, pattern, level = resolve(f"{home}/dotfiles/flake.nix", False)
         assert decision == "allow"
@@ -83,7 +83,7 @@ class TestResolve:
         assert pattern.pattern == "(^|/)secrets(/|$)"
 
     def test_restrictive_perms_denied(self):
-        """Mode 600 file with no pattern matches -> DENY at L5"""
+        """Mode 600 file with no pattern matches -> DENY at L6"""
         decision, reason, pattern, level = resolve("/tmp/random.txt", True)
         assert decision == "deny"
         assert level == SpecificityLevel.PERMISSIONS
@@ -95,3 +95,48 @@ class TestResolve:
         assert decision == "pass"
         assert pattern is None
         assert level is None
+
+
+class TestTrustedDirResolution:
+    def test_claude_projects_read_allowed(self):
+        """~/.claude/projects/foo/memory READ -> ALLOW at TRUSTED_DIR"""
+        home = str(Path.home())
+        decision, reason, pattern, level = resolve(
+            f"{home}/.claude/projects/foo/memory/bar.md", False, Operation.READ
+        )
+        assert decision == "allow"
+        assert level == SpecificityLevel.TRUSTED_DIR
+
+    def test_claude_projects_write_passes(self):
+        """~/.claude/projects/foo WRITE -> PASS (allowed_ops=READ only)"""
+        home = str(Path.home())
+        decision, reason, pattern, level = resolve(
+            f"{home}/.claude/projects/foo/memory/bar.md", False, Operation.WRITE
+        )
+        assert decision == "pass"
+
+    def test_claude_projects_unknown_passes(self):
+        """~/.claude/projects/foo UNKNOWN -> PASS"""
+        home = str(Path.home())
+        decision, reason, pattern, level = resolve(
+            f"{home}/.claude/projects/foo/memory/bar.md", False, Operation.UNKNOWN
+        )
+        assert decision == "pass"
+
+    def test_claude_projects_secrets_still_denied(self):
+        """secrets inside ~/.claude/projects -> DENY at SECURITY_DIRECTORY (L4 beats L5)"""
+        home = str(Path.home())
+        decision, reason, pattern, level = resolve(
+            f"{home}/.claude/projects/foo/secrets/api.key", False, Operation.READ
+        )
+        assert decision == "deny"
+        assert level == SpecificityLevel.SECURITY_DIRECTORY
+
+    def test_claude_projects_credential_denied(self):
+        """credential in ~/.claude/projects -> DENY (SECURITY_DIRECTORY)"""
+        home = str(Path.home())
+        decision, reason, pattern, level = resolve(
+            f"{home}/.claude/projects/foo/credential.json", False, Operation.READ
+        )
+        assert decision == "deny"
+        assert level == SpecificityLevel.SECURITY_DIRECTORY

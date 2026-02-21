@@ -31,6 +31,7 @@ class TestImports:
         assert hasattr(SpecificityLevel, "FILE_EXTENSION")
         assert hasattr(SpecificityLevel, "DIRECTORY")
         assert hasattr(SpecificityLevel, "SECURITY_DIRECTORY")
+        assert hasattr(SpecificityLevel, "TRUSTED_DIR")
         assert hasattr(SpecificityLevel, "PERMISSIONS")
         assert hasattr(SpecificityLevel, "DIR_GLOB")
         assert hasattr(SpecificityLevel, "GLOB_MIDDLE")
@@ -56,9 +57,10 @@ class TestSpecificityLevels:
             ("FILE_EXTENSION", 2),
             ("DIRECTORY", 3),
             ("SECURITY_DIRECTORY", 4),
-            ("PERMISSIONS", 5),
-            ("DIR_GLOB", 6),
-            ("GLOB_MIDDLE", 7),
+            ("TRUSTED_DIR", 5),
+            ("PERMISSIONS", 6),
+            ("DIR_GLOB", 7),
+            ("GLOB_MIDDLE", 8),
         ],
     )
     def test_level_ordering(self, level_name, expected_value):

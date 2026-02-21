@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from opencode_security.filter import SecurityFilter
-from opencode_security.types import SpecificityLevel
+from opencode_security.types import Operation, SpecificityLevel
 
 
 @pytest.fixture
@@ -89,3 +89,15 @@ class TestSecurityFilterHelpers:
         home = str(Path.home())
         assert filter.should_block(f"{home}/.ssh/id_rsa") is True
         assert filter.should_block(f"{home}/dotfiles/flake.nix") is False
+
+
+class TestOperationAwareFiltering:
+    def test_check_with_read_operation(self, filter):
+        home = str(Path.home())
+        result = filter.check(f"{home}/.claude/projects/foo/bar", operation=Operation.READ)
+        assert result.decision == "allow"
+
+    def test_check_with_write_operation(self, filter):
+        home = str(Path.home())
+        result = filter.check(f"{home}/.claude/projects/foo/bar", operation=Operation.WRITE)
+        assert result.decision == "pass"

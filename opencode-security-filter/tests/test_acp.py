@@ -173,3 +173,24 @@ class TestCreateAutoAllowResponse:
         assert "result" in result
         assert result["result"]["outcome"]["type"] == "selected"
         assert result["result"]["outcome"]["optionId"] == "allow_once"
+
+
+class TestExtractPathsExtended:
+    def test_multiedit_extracts_all_paths(self):
+        paths = extract_paths_from_tool("MultiEdit", {
+            "edits": [{"file_path": "/a.py"}, {"file_path": "/b.py"}]
+        })
+        assert "/a.py" in paths
+        assert "/b.py" in paths
+
+    def test_notebook_edit_extracts_path(self):
+        paths = extract_paths_from_tool("NotebookEdit", {"notebook_path": "/nb.ipynb"})
+        assert "/nb.ipynb" in paths
+
+    def test_glob_extracts_path(self):
+        paths = extract_paths_from_tool("Glob", {"path": "/src"})
+        assert "/src" in paths
+
+    def test_grep_extracts_path(self):
+        paths = extract_paths_from_tool("Grep", {"path": "/src"})
+        assert "/src" in paths

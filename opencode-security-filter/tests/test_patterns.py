@@ -1,10 +1,11 @@
 """Tests for pattern matching."""
 
+import re
 from pathlib import Path
 
 import pytest
 
-from opencode_security.patterns import PATTERNS, expand_pattern, match_pattern
+from opencode_security.patterns import PATTERNS, _build_recursive_dir_regex, expand_pattern, match_pattern
 from opencode_security.types import SpecificityLevel
 
 
@@ -81,3 +82,18 @@ class TestPatternsConfig:
         assert SpecificityLevel.FILE_EXTENSION in levels_present
         assert SpecificityLevel.DIR_GLOB in levels_present
         assert SpecificityLevel.SECURITY_DIRECTORY in levels_present
+        assert SpecificityLevel.TRUSTED_DIR in levels_present
+
+
+class TestRecursiveDirPattern:
+    def test_trusted_dir_pattern_exists(self):
+        trusted = [p for p in PATTERNS if p.level == SpecificityLevel.TRUSTED_DIR]
+        assert len(trusted) >= 1
+        assert any("claude" in p.pattern for p in trusted)
+
+    def test_recursive_matches_descendants(self):
+        regex = re.compile(_build_recursive_dir_regex("~/.claude/projects"))
+        home = str(Path.home())
+        assert regex.search(f"{home}/.claude/projects/foo/bar")
+        assert regex.search(f"{home}/.claude/projects")
+        assert not regex.search(f"{home}/.claude/settings")
