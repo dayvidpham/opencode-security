@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from .types import SecurityPattern, SpecificityLevel
+from .types import SecurityPattern, SpecificityLevel, Operation
 
 
 def _home() -> str:
@@ -80,6 +80,26 @@ def _build_security_dir_regex(dir_name: str) -> str:
     # Match: /secrets/, /secrets (at end), or secrets/ (at start)
     # Uses word boundary on directory separators
     return f"(^|/){escaped}(/|$)"
+
+
+def _build_recursive_dir_regex(dir_path: str) -> str:
+    """Build regex matching dir_path and all descendants recursively.
+
+    Unlike _build_security_dir_regex which matches a name anywhere in the path,
+    this function matches an anchored absolute path and everything below it.
+
+    Note: Only safe when called on canonicalized paths (.. already resolved
+    by SecurityFilter.check before pattern matching).
+
+    Args:
+        dir_path: Absolute or ~-prefixed path (e.g., "~/.claude/projects")
+
+    Returns:
+        Regex pattern matching the directory and all contents recursively.
+    """
+    expanded = str(Path(dir_path).expanduser())
+    escaped = re.escape(expanded)
+    return f"^{escaped}(/|$)"
 
 
 # Pattern configuration - all security patterns using compiled regex
@@ -224,7 +244,16 @@ PATTERNS: list[SecurityPattern] = [
         "Password files",
     ),
 
-    # Level 6: Directory + direct children (ALLOW - trusted paths)
+    # Level 5: Trusted agent directories (ALLOW - overrides permissions, READ only)
+    SecurityPattern(
+        _build_recursive_dir_regex("~/.claude/projects"),
+        "allow",
+        SpecificityLevel.TRUSTED_DIR,
+        "Claude agent data (projects)",
+        allowed_ops=frozenset({Operation.READ}),
+    ),
+
+    # Level 7: Directory + direct children (ALLOW - trusted paths)
     SecurityPattern(
         _build_dir_glob_regex("~/dotfiles"),
         "allow",

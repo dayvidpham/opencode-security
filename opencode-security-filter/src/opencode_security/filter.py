@@ -1,6 +1,6 @@
 """Security filter orchestrating all checks."""
 
-from .types import CheckResult
+from .types import CheckResult, Operation
 from .paths import canonicalize, is_restrictive_permissions
 from .resolver import resolve
 
@@ -11,15 +11,22 @@ class SecurityFilter:
     Uses specificity-based precedence:
     - More specific patterns supersede broader patterns
     - DENY supersedes ALLOW at each specificity level
+    - Operation-aware patterns can restrict allows to specific tool types
     - Fail-closed on errors
     """
 
-    def check(self, file_path: str, cwd: str | None = None) -> CheckResult:
+    def check(
+        self,
+        file_path: str,
+        cwd: str | None = None,
+        operation: Operation = Operation.UNKNOWN,
+    ) -> CheckResult:
         """Check if a file path should be allowed, denied, or passed through.
 
         Args:
             file_path: The file path to check
             cwd: Current working directory for relative paths
+            operation: The operation type (READ, WRITE, UNKNOWN)
 
         Returns:
             CheckResult with decision, reason, and match details
@@ -36,7 +43,9 @@ class SecurityFilter:
                 has_restrictive_perms = False
 
             # Step 3: Run specificity-based resolution
-            decision, reason, pattern, level = resolve(canonical_path, has_restrictive_perms)
+            decision, reason, pattern, level = resolve(
+                canonical_path, has_restrictive_perms, operation
+            )
 
             return CheckResult(
                 decision=decision,
@@ -58,11 +67,21 @@ class SecurityFilter:
                 matched_level=None
             )
 
-    def check_multiple(self, file_paths: list[str], cwd: str | None = None) -> list[CheckResult]:
+    def check_multiple(
+        self,
+        file_paths: list[str],
+        cwd: str | None = None,
+        operation: Operation = Operation.UNKNOWN,
+    ) -> list[CheckResult]:
         """Check multiple file paths."""
-        return [self.check(path, cwd) for path in file_paths]
+        return [self.check(path, cwd, operation) for path in file_paths]
 
-    def should_block(self, file_path: str, cwd: str | None = None) -> bool:
+    def should_block(
+        self,
+        file_path: str,
+        cwd: str | None = None,
+        operation: Operation = Operation.UNKNOWN,
+    ) -> bool:
         """Quick check if path should be blocked."""
-        result = self.check(file_path, cwd)
+        result = self.check(file_path, cwd, operation)
         return result.decision == "deny"
