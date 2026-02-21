@@ -1,6 +1,6 @@
 """SecurityProxy for intercepting ACP messages."""
 
-from .types import PermissionRequest
+from .types import PermissionRequest, classify_operation
 from .filter import SecurityFilter
 from .acp import (
     parse_message,
@@ -109,9 +109,10 @@ class SecurityProxy:
             A tuple of (response_to_agent, should_forward_to_client).
         """
         has_pass = False
+        operation = classify_operation(request.tool_name)
 
         for path in paths:
-            result = self._filter.check(path, self._cwd)
+            result = self._filter.check(path, self._cwd, operation)
 
             if result.decision == "deny":
                 # Any denied path -> immediate block

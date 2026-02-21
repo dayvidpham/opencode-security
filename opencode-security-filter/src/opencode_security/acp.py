@@ -65,17 +65,32 @@ def extract_paths_from_tool(tool_name: str, tool_input: dict) -> list[str]:
     """Extract file paths from tool call input.
 
     Handles:
-    - bash: parse command for file paths
-    - read_file, write_file, edit_file: extract file_path
+    - bash/Bash: parse command for file paths
+    - read_file, write_file, edit_file, Read, Write, Edit: extract file_path
+    - MultiEdit: extract file_path from each edit in edits[]
+    - NotebookEdit: extract notebook_path
+    - Glob, Grep: extract path field
     """
     paths: list[str] = []
 
-    if tool_name == "bash":
+    if tool_name.lower() == "bash":
         command = tool_input.get("command", "")
         paths.extend(_extract_paths_from_command(command))
     elif tool_name in ("read_file", "write_file", "edit_file", "Read", "Write", "Edit"):
         if "file_path" in tool_input:
             paths.append(tool_input["file_path"])
+    elif tool_name == "MultiEdit":
+        for edit in tool_input.get("edits", []):
+            if "file_path" in edit:
+                paths.append(edit["file_path"])
+    elif tool_name == "NotebookEdit":
+        notebook_path = tool_input.get("notebook_path", "")
+        if notebook_path:
+            paths.append(notebook_path)
+    elif tool_name in ("Glob", "Grep"):
+        path = tool_input.get("path", "")
+        if path:
+            paths.append(path)
 
     return paths
 

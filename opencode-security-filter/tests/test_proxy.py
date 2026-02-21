@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from opencode_security.proxy import SecurityProxy
 from opencode_security.filter import SecurityFilter
 from opencode_security.acp import SECURITY_BLOCK_ERROR_CODE
-from opencode_security.types import CheckResult, SecurityPattern, SpecificityLevel
+from opencode_security.types import CheckResult, Operation, SecurityPattern, SpecificityLevel
 
 
 def make_permission_request(
@@ -395,5 +395,5 @@ class TestProcessAgentMessageCwdPropagation:
         raw = make_permission_request(tool_input={"file_path": "./relative.txt"})
         proxy.process_agent_message(raw)
 
-        # Verify cwd was passed to the filter
-        mock_filter.check.assert_called_with("./relative.txt", "/home/user/project")
+        # Verify cwd and operation were passed to the filter
+        mock_filter.check.assert_called_with("./relative.txt", "/home/user/project", Operation.READ)
