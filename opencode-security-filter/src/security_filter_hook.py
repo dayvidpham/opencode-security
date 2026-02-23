@@ -10,6 +10,7 @@ SecurityProxy for all security decisions.
 import json
 import sys
 
+from opencode_security.acp import format_security_block_stderr
 from opencode_security.proxy import SecurityProxy
 
 
@@ -50,17 +51,10 @@ def main() -> None:
         response = json.loads(response_bytes)
 
         if "error" in response:
-            data = response["error"]["data"]
-            lines = [
-                f"SECURITY BLOCK: Access to {data['path']} denied.",
-                f"Pattern: {data['pattern']} (level {data['level']})",
-                data["warning"],
-            ]
-            for d in data["directives"]["do_not"]:
-                lines.append(f"  - {d}")
-            for d in data["directives"]["must"]:
-                lines.append(f"  - {d}")
-            print("\n".join(lines), file=sys.stderr)
+            print(
+                format_security_block_stderr(response["error"]["data"]),
+                file=sys.stderr,
+            )
             sys.exit(2)
 
         # result with allow_once -> permitted

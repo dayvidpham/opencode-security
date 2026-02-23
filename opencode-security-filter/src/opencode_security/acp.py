@@ -184,6 +184,28 @@ def create_security_block_error(
     }
 
 
+def format_security_block_stderr(error_data: dict) -> str:
+    """Format ACP security block error data as human-readable stderr text.
+
+    Args:
+        error_data: The 'data' dict from a security block error response
+                    (as returned by create_security_block_error).
+
+    Returns:
+        Multi-line string suitable for stderr output.
+    """
+    lines = [
+        f"SECURITY BLOCK: Access to {error_data['path']} denied.",
+        f"Pattern: {error_data['pattern']} (level {error_data['level']})",
+        error_data["warning"],
+    ]
+    for d in error_data["directives"]["do_not"]:
+        lines.append(f"  - {d}")
+    for d in error_data["directives"]["must"]:
+        lines.append(f"  - {d}")
+    return "\n".join(lines)
+
+
 def create_auto_allow_response(request_id: str | int) -> dict:
     """Create an auto-allow response for trusted paths.
 

@@ -7,6 +7,7 @@ from .acp import (
     create_rejection,
     create_security_block_error,
     extract_paths_from_tool,
+    format_security_block_stderr,
     is_permission_request,
     parse_message,
     parse_permission_request,
@@ -70,4 +71,5 @@ __all__ = [
     "SECURITY_BLOCK_ERROR_CODE",
     "create_security_block_error",
     "create_auto_allow_response",
+    "format_security_block_stderr",
 ]
