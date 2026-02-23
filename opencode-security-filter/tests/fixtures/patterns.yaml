@@ -15,6 +15,117 @@
 #   - For files: prefix + "/" + filename
 #   - For extensions: prefix + "/" + any_name + extension
 
+# Source code file extensions that should NOT trigger credential/password blocking.
+# These are clearly source code, not credential data.
+# Used by _build_substring_deny_regex() and test parametrization.
+source_code_extensions:
+  - go
+  - py
+  - ts
+  - tsx
+  - js
+  - jsx
+  - mjs
+  - cjs
+  - rs
+  - java
+  - kt
+  - kts
+  - rb
+  - c
+  - cc
+  - cpp
+  - cxx
+  - h
+  - hh
+  - hpp
+  - hxx
+  - cs
+  - fs
+  - swift
+  - scala
+  - lua
+  - sh
+  - bash
+  - zsh
+  - fish
+  - ps1
+  - php
+  - pl
+  - pm
+  - r
+  - jl
+  - hs
+  - erl
+  - ex
+  - exs
+  - clj
+  - cljs
+  - cljc
+  - nix
+  - ml
+  - mli
+  - zig
+  - v
+  - d
+  - dart
+  - elm
+  - nim
+  - cr
+  - purs
+  - vue
+  - svelte
+
+# Data file extensions that should STILL trigger credential/password blocking.
+# These are config/data files, not source code.
+data_file_extensions:
+  - json
+  - yaml
+  - yml
+  - toml
+  - xml
+  - ini
+  - conf
+  - cfg
+  - properties
+  - txt
+  - csv
+  - dat
+  - db
+  - sqlite
+
+# Source code exclusion test cases for credential/password patterns.
+# These paths contain "credential" or "password" but end with source code
+# extensions, so they should NOT be blocked.
+source_code_exclusion_paths:
+  credential_source_files:
+    description: "Source code files with 'credential' in name should NOT be blocked"
+    # These are parametrized with source_code_extensions at test time
+    path_templates:
+      - "/home/user/dev/auth/credentials.{ext}"
+      - "/home/user/dev/agent-data-leverage/jon-auth/internal/auth/credentials.{ext}"
+      - "/home/user/dev/auth/credential_handler.{ext}"
+  password_source_files:
+    description: "Source code files with 'password' in name should NOT be blocked"
+    path_templates:
+      - "/home/user/dev/auth/password_utils.{ext}"
+      - "/home/user/dev/auth/password.{ext}"
+  # Data files with credential/password that should STILL be blocked
+  credential_data_files_still_blocked:
+    description: "Data files with 'credential' should still be blocked"
+    paths:
+      - "/home/user/project/credentials.json"
+      - "/home/user/project/credentials.yaml"
+      - "/home/user/project/credential.toml"
+      - "/home/user/project/credentials/config"
+      - "/home/user/.aws/aws_credentials"
+  password_data_files_still_blocked:
+    description: "Data files with 'password' should still be blocked"
+    paths:
+      - "/home/user/project/password.txt"
+      - "/home/user/project/passwords.yaml"
+      - "/home/user/project/password.json"
+
 # Path prefixes where patterns should be tested
 # Includes absolute paths, user directories, and project structures
 path_prefixes:

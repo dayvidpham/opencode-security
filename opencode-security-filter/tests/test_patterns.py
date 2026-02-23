@@ -13,6 +13,9 @@ from opencode_security.patterns import (
     match_pattern,
 )
 from opencode_security.types import SpecificityLevel
+from .fixtures.pattern_fixture import PatternFixture
+
+_FIXTURE = PatternFixture(str(Path(__file__).parent / "fixtures" / "patterns.yaml"))
 
 
 class TestExpandPattern:
@@ -106,23 +109,22 @@ class TestRecursiveDirPattern:
 
 
 class TestSubstringDenyPattern:
-    """Tests for _build_substring_deny_regex — substring match excluding source code files."""
+    """Tests for _build_substring_deny_regex — substring match excluding source code files.
 
-    def test_matches_data_file_with_substring(self):
-        regex = re.compile(_build_substring_deny_regex("credential"))
-        assert regex.search("/path/to/credentials.json")
-        assert regex.search("/path/to/credential.yaml")
-        assert regex.search("/path/to/credential.toml")
+    Extensions loaded from tests/fixtures/patterns.yaml.
+    """
 
-    def test_excludes_source_code_files(self):
+    @pytest.mark.parametrize("ext", _FIXTURE.data_file_extensions[:3])
+    def test_matches_data_file_with_substring(self, ext):
         regex = re.compile(_build_substring_deny_regex("credential"))
-        assert not regex.search("/path/to/credentials.go")
-        assert not regex.search("/path/to/credentials.py")
-        assert not regex.search("/path/to/credentials.ts")
-        assert not regex.search("/path/to/credential_handler.rs")
-        assert not regex.search("/path/to/credentials.java")
-        assert not regex.search("/path/to/credentials.rb")
-        assert not regex.search("/path/to/credentials.nix")
+        assert regex.search(f"/path/to/credentials.{ext}")
+
+    @pytest.mark.parametrize("ext", _FIXTURE.source_code_extensions)
+    def test_excludes_source_code_files(self, ext):
+        regex = re.compile(_build_substring_deny_regex("credential"))
+        assert not regex.search(f"/path/to/credentials.{ext}"), (
+            f"credentials.{ext} should NOT be matched by credential deny pattern"
+        )
 
     def test_matches_directory_with_substring(self):
         regex = re.compile(_build_substring_deny_regex("credential"))
@@ -138,12 +140,17 @@ class TestSubstringDenyPattern:
         assert not regex.search("/path/to/config.json")
         assert not regex.search("/path/to/handler.go")
 
-    def test_password_pattern_excludes_source(self):
+    @pytest.mark.parametrize("ext", _FIXTURE.source_code_extensions)
+    def test_password_pattern_excludes_source(self, ext):
         regex = re.compile(_build_substring_deny_regex("password"))
-        assert not regex.search("/path/to/password_utils.go")
-        assert not regex.search("/path/to/password.py")
-        assert regex.search("/path/to/password.txt")
-        assert regex.search("/path/to/passwords.yaml")
+        assert not regex.search(f"/path/to/password_utils.{ext}"), (
+            f"password_utils.{ext} should NOT be matched by password deny pattern"
+        )
+
+    @pytest.mark.parametrize("ext", _FIXTURE.data_file_extensions[:3])
+    def test_password_pattern_blocks_data_files(self, ext):
+        regex = re.compile(_build_substring_deny_regex("password"))
+        assert regex.search(f"/path/to/passwords.{ext}")
 
     def test_deep_path_with_credential_source_file(self):
         """Exact reproduction of the reported bug."""

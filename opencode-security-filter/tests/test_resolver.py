@@ -9,6 +9,9 @@ from opencode_security.resolver import (
     resolve,
 )
 from opencode_security.types import Operation, SpecificityLevel
+from .fixtures.pattern_fixture import PatternFixture
+
+_FIXTURE = PatternFixture(str(Path(__file__).parent / "fixtures" / "patterns.yaml"))
 
 
 class TestFindMatchingPatterns:
@@ -143,9 +146,12 @@ class TestTrustedDirResolution:
 
 
 class TestSourceCodeExclusion:
-    """Source code files with credential/password in the name should not be blocked."""
+    """Source code files with credential/password in the name should not be blocked.
 
-    @pytest.mark.parametrize("ext", ["go", "py", "ts", "tsx", "js", "jsx", "rs", "java", "rb", "c", "cpp", "cs", "nix"])
+    Extensions and test paths loaded from tests/fixtures/patterns.yaml.
+    """
+
+    @pytest.mark.parametrize("ext", _FIXTURE.source_code_extensions)
     def test_credentials_source_file_not_blocked(self, ext):
         """credentials.{ext} should PASS (not blocked by credential pattern)"""
         decision, reason, pattern, level = resolve(
@@ -153,7 +159,7 @@ class TestSourceCodeExclusion:
         )
         assert decision == "pass", f"credentials.{ext} should pass, got {decision}: {reason}"
 
-    @pytest.mark.parametrize("ext", ["go", "py", "ts", "js", "rs", "java", "rb"])
+    @pytest.mark.parametrize("ext", _FIXTURE.source_code_extensions)
     def test_password_source_file_not_blocked(self, ext):
         """password_utils.{ext} should PASS"""
         decision, reason, pattern, level = resolve(
@@ -161,60 +167,37 @@ class TestSourceCodeExclusion:
         )
         assert decision == "pass", f"password_utils.{ext} should pass, got {decision}: {reason}"
 
-    @pytest.mark.parametrize("ext", ["go", "py", "ts"])
-    def test_credential_handler_not_blocked(self, ext):
+    @pytest.mark.parametrize("ext", _FIXTURE.source_code_extensions)
+    def test_credential_handler_deep_path_not_blocked(self, ext):
         """credential_handler.{ext} in a deep path should PASS"""
         decision, reason, pattern, level = resolve(
             f"/home/user/dev/agent-data-leverage/jon-auth/internal/auth/credential_handler.{ext}",
             False,
         )
-        assert decision == "pass"
+        assert decision == "pass", f"credential_handler.{ext} should pass, got {decision}: {reason}"
 
-    def test_credential_json_still_blocked(self):
-        """credentials.json should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/project/credentials.json", False
-        )
-        assert decision == "deny"
+    @pytest.mark.parametrize(
+        "path",
+        _FIXTURE.source_code_exclusion_paths
+        .get("credential_data_files_still_blocked", {})
+        .get("paths", []),
+    )
+    def test_credential_data_files_still_blocked(self, path):
+        """Data files with 'credential' in name should still be DENIED"""
+        decision, reason, pattern, level = resolve(path, False)
+        assert decision == "deny", f"{path} should be denied, got {decision}: {reason}"
         assert level == SpecificityLevel.SECURITY_DIRECTORY
 
-    def test_credential_yaml_still_blocked(self):
-        """credentials.yaml should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/project/credentials.yaml", False
-        )
-        assert decision == "deny"
-        assert level == SpecificityLevel.SECURITY_DIRECTORY
-
-    def test_password_txt_still_blocked(self):
-        """password.txt should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/project/password.txt", False
-        )
-        assert decision == "deny"
-        assert level == SpecificityLevel.SECURITY_DIRECTORY
-
-    def test_credential_dir_still_blocked(self):
-        """credentials/ directory should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/project/credentials/config", False
-        )
-        assert decision == "deny"
-        assert level == SpecificityLevel.SECURITY_DIRECTORY
-
-    def test_aws_credentials_no_ext_still_blocked(self):
-        """aws_credentials (no extension) should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/.aws/aws_credentials", False
-        )
-        assert decision == "deny"
-
-    def test_credential_toml_still_blocked(self):
-        """credential.toml should still be DENIED"""
-        decision, reason, pattern, level = resolve(
-            "/home/user/project/credential.toml", False
-        )
-        assert decision == "deny"
+    @pytest.mark.parametrize(
+        "path",
+        _FIXTURE.source_code_exclusion_paths
+        .get("password_data_files_still_blocked", {})
+        .get("paths", []),
+    )
+    def test_password_data_files_still_blocked(self, path):
+        """Data files with 'password' in name should still be DENIED"""
+        decision, reason, pattern, level = resolve(path, False)
+        assert decision == "deny", f"{path} should be denied, got {decision}: {reason}"
         assert level == SpecificityLevel.SECURITY_DIRECTORY
 
     def test_secrets_dir_still_blocks_source_files(self):

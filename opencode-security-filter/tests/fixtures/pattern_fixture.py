@@ -68,6 +68,21 @@ class PatternFixture:
             self.data = yaml.safe_load(f)
 
     @property
+    def source_code_extensions(self) -> list[str]:
+        """Get source code file extensions that should not trigger credential/password blocking."""
+        return self.data.get("source_code_extensions", [])
+
+    @property
+    def data_file_extensions(self) -> list[str]:
+        """Get data file extensions that should still trigger credential/password blocking."""
+        return self.data.get("data_file_extensions", [])
+
+    @property
+    def source_code_exclusion_paths(self) -> dict:
+        """Get source code exclusion test path definitions."""
+        return self.data.get("source_code_exclusion_paths", {})
+
+    @property
     def path_prefixes(self) -> list[str]:
         """Get all path prefixes."""
         return self.data.get("path_prefixes", [])
