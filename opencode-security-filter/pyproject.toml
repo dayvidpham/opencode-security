@@ -1,6 +1,6 @@
 [project]
 name = "opencode-security-filter"
-version = "0.2.0"
+version = "0.3.0"
 description = "ACP-compliant security proxy for OpenCode file access control"
 readme = "README.md"
 requires-python = ">=3.11"
